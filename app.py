@@ -1,17 +1,13 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import PyPDF2
-import openai
+from openai import OpenAI
 import os
 
 app = Flask(__name__)
 CORS(app)
 
-@app.route('/widget')
-def serve_widget():
-    return send_from_directory('static', 'widget.html')
-
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 @app.route('/')
 def home():
@@ -53,15 +49,20 @@ def chat():
     prompt = f'Here is a summary of an RFP: "{summary}". Now answer this question: {question}'
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "You are a grantwriting expert helping users interpret RFPs and write proposals."},
                 {"role": "user", "content": prompt}
             ]
         )
-        answer = response.choices[0].message["content"]
+        answer = response.choices[0].message.content
         return jsonify({"answer": answer})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/widget')
+def serve_widget():
+    return send_from_directory('static', 'widget.html')
+
 
