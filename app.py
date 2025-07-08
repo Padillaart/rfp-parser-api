@@ -18,6 +18,18 @@ def analyze():
     file = request.files.get("file")
     if not file:
         return jsonify({"error": "No file uploaded"}), 400
+      MAX_FILE_SIZE_MB = 5
+file = request.files.get("file")
+
+if not file:
+    return jsonify({"error": "No file uploaded"}), 400
+
+file.seek(0, os.SEEK_END)
+size_mb = file.tell() / (1024 * 1024)
+file.seek(0)
+
+if size_mb > MAX_FILE_SIZE_MB:
+    return jsonify({"error": "File too large. Max 5MB allowed."}), 400 
 
     reader = PyPDF2.PdfReader(file)
     full_text = ""
