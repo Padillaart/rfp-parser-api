@@ -1,27 +1,23 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import PyPDF2
-import openai
 import os
+import openai
 
-# Initialize Flask app and enable CORS
 app = Flask(__name__)
 CORS(app)
 
-# Serve the widget HTML
+# Set up OpenAI client using new SDK style
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 @app.route('/widget')
 def serve_widget():
     return send_from_directory('static', 'widget.html')
 
-# Set your OpenAI API key from environment variable
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
-# Basic home route
 @app.route('/')
 def home():
     return "RFP Parser API is live!"
 
-# Endpoint to analyze uploaded PDF
 @app.route('/analyze', methods=["POST"])
 def analyze():
     file = request.files.get("file")
@@ -46,7 +42,6 @@ def analyze():
         "summary": summary
     })
 
-# Endpoint for AI-powered Q&A based on summary
 @app.route('/chat', methods=["POST"])
 def chat():
     data = request.get_json()
@@ -59,14 +54,14 @@ def chat():
     prompt = f'Here is a summary of an RFP: "{summary}". Now answer this question: {question}'
 
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # This works for all API users
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a grantwriting expert helping users interpret RFPs and write proposals."},
                 {"role": "user", "content": prompt}
             ]
         )
-        answer = response.choices[0].message["content"]
+        answer = response.choices[0].message.content
         return jsonify({"answer": answer})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
