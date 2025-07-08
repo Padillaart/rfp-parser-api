@@ -1,9 +1,13 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import PyPDF2
+import openai
+import os
 
 app = Flask(__name__)
-CORS(app)  # <--- This enables CORS
+CORS(app)
+
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 @app.route('/')
 def home():
@@ -32,3 +36,27 @@ def analyze():
         "max_request": max_request,
         "summary": summary
     })
+
+@app.route('/chat', methods=["POST"])
+def chat():
+    data = request.get_json()
+    summary = data.get("summary")
+    question = data.get("question")
+
+    if not summary or not question:
+        return jsonify({"error": "Missing summary or question"}), 400
+
+    prompt = f'Here is a summary of an RFP: "{summary}". Now answer this question: {question}'
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a grantwriting expert helping users interpret RFPs and write proposals."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        answer = response.choices[0].message["content"]
+        return jsonify({"answer": answer})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
