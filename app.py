@@ -6,6 +6,7 @@ import os
 
 app = Flask(__name__)
 CORS(app)
+
 @app.route('/widget')
 def serve_widget():
     return send_from_directory('static', 'widget.html')
@@ -63,7 +64,4 @@ def chat():
         return jsonify({"answer": answer})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-@app.route('/widget')
-def serve_widget():
-    return send_from_directory('static', 'widget.html')
-        
+
