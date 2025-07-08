@@ -4,49 +4,49 @@ import PyPDF2
 import openai
 import os
 
+# Initialize Flask app and enable CORS
 app = Flask(__name__)
 CORS(app)
 
-MAX_FILE_SIZE_MB = 5  # Optional limit for file size if you want to enforce later
-
+# Serve the widget HTML
 @app.route('/widget')
 def serve_widget():
     return send_from_directory('static', 'widget.html')
 
+# Set your OpenAI API key from environment variable
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+# Basic home route
 @app.route('/')
 def home():
     return "RFP Parser API is live!"
 
+# Endpoint to analyze uploaded PDF
 @app.route('/analyze', methods=["POST"])
 def analyze():
     file = request.files.get("file")
     if not file:
         return jsonify({"error": "No file uploaded"}), 400
 
-    try:
-        reader = PyPDF2.PdfReader(file)
-        full_text = ""
-        for page in reader.pages:
-            full_text += page.extract_text() or ""
+    reader = PyPDF2.PdfReader(file)
+    full_text = ""
+    for page in reader.pages:
+        full_text += page.extract_text() or ""
 
-        due_date = "August 15, 2025" if "August 15" in full_text else "Unknown"
-        max_request = "$250,000" if "$250,000" in full_text else "Not specified"
-        summary = (
-            "This RFP funds innovative education and health equity programs with an emphasis on underserved populations."
-            if "education" in full_text else "Summary not found."
-        )
+    due_date = "August 15, 2025" if "August 15" in full_text else "Unknown"
+    max_request = "$250,000" if "$250,000" in full_text else "Not specified"
+    summary = (
+        "This RFP funds innovative education and health equity programs with an emphasis on underserved populations."
+        if "education" in full_text else "Summary not found."
+    )
 
-        return jsonify({
-            "due_date": due_date,
-            "max_request": max_request,
-            "summary": summary
-        })
+    return jsonify({
+        "due_date": due_date,
+        "max_request": max_request,
+        "summary": summary
+    })
 
-    except Exception as e:
-        return jsonify({"error": f"Error analyzing PDF: {str(e)}"}), 500
-
+# Endpoint for AI-powered Q&A based on summary
 @app.route('/chat', methods=["POST"])
 def chat():
     data = request.get_json()
@@ -59,15 +59,14 @@ def chat():
     prompt = f'Here is a summary of an RFP: "{summary}". Now answer this question: {question}'
 
     try:
-        response = openai.chat.completions.create(
-            model="gpt-4",
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # This works for all API users
             messages=[
                 {"role": "system", "content": "You are a grantwriting expert helping users interpret RFPs and write proposals."},
                 {"role": "user", "content": prompt}
             ]
         )
-        answer = response.choices[0].message.content
+        answer = response.choices[0].message["content"]
         return jsonify({"answer": answer})
-
     except Exception as e:
-        return jsonify({"error": f"OpenAI Error: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
