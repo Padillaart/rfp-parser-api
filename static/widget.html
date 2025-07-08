@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+  <body style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto;">
+    <h3>Upload RFP for Auto Review</h3>
+    <input type="file" id="fileInput" accept=".pdf" />
+    <button onclick="analyze()">Analyze</button>
+
+    <div style="margin-top: 20px; border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
+      <strong>RFP Summary</strong><br />
+      <strong>Due Date:</strong> <span id="dueDate">-</span><br />
+      <strong>Max Request:</strong> <span id="maxRequest">-</span><br />
+      <strong>Summary:</strong> <span id="summary">-</span>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <label for="userInput"><strong>Ask about this RFP:</strong></label><br />
+      <textarea id="userInput" rows="3" style="width: 100%;"></textarea><br />
+      <button onclick="askAI()">Ask AI</button>
+    </div>
+
+    <div style="margin-top: 10px; border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
+      <strong>AI Response:</strong>
+      <div id="aiResponse" style="white-space: pre-wrap; margin-top: 5px;">-</div>
+    </div>
+
+    <script>
+      let latestRfpSummary = '';
+
+      function analyze() {
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+        if (!file) return alert('Please select a PDF file.');
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        fetch('https://rfp-parser-api.onrender.com/analyze', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('dueDate').textContent = data.due_date || '-';
+          document.getElementById('maxRequest').textContent = data.max_request || '-';
+          document.getElementById('summary').textContent = data.summary || '-';
+          latestRfpSummary = data.summary;
+        })
+        .catch(() => alert('Error analyzing RFP.'));
+      }
+
+      async function askAI() {
+        const userInput = document.getElementById('userInput').value;
+        if (!userInput) return alert('Enter a question.');
+
+        const response = await fetch("https://rfp-parser-api.onrender.com/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            summary: latestRfpSummary,
+            question: userInput
+          })
+        });
+
+        const data = await response.json();
+        const reply = data.answer || data.error || 'No response.';
+        document.getElementById('aiResponse').textContent = reply;
+      }
+    </script>
+  </body>
+</html>
