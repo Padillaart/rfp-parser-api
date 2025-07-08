@@ -21,8 +21,14 @@ def analyze():
 
     reader = PyPDF2.PdfReader(file)
     full_text = ""
-    for page in reader.pages:
-        full_text += page.extract_text() or ""
+   for i, page in enumerate(reader.pages):
+    try:
+        page_text = page.extract_text()
+        if page_text:
+            full_text += page_text
+    except Exception as e:
+        print(f"Error extracting text from page {i}: {e}")
+
 
     due_date = "August 15, 2025" if "August 15" in full_text else "Unknown"
     max_request = "$250,000" if "$250,000" in full_text else "Not specified"
